@@ -87,6 +87,7 @@ class Favorites extends StatelessWidget {
                       ]
                   ),
                   child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
                         margin: EdgeInsets.only(left: 16, right: 206),

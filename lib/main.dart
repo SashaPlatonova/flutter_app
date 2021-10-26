@@ -20,6 +20,8 @@ String city = "Saint Petersburg";
 void main() {
   initializeDateFormatting('ru', null);
   runApp(const MyApp());
+  DateTime dat = DateTime.now();
+  print(dat);
 }
 
 class MyApp extends StatefulWidget {
@@ -296,7 +298,7 @@ class _MyHomePageState extends State<MyHomePage> {
                                         fontSize: 17,
                                         color: Theme.of(context).primaryColor),
                                   ),
-                                  getWeatherIcon('rain3', Theme.of(context).colorScheme.brightness),
+                                  getWeatherIcon(todayWeather[index].image, Theme.of(context).colorScheme.brightness),
                                   Text(
                                     todayWeather[index].current.toString() + '˚c',
                                     style: TextStyle(

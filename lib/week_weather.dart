@@ -1,9 +1,36 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_app/weather.dart';
 
-class WeekWeather extends StatelessWidget {
+
+String lat = "59.931";
+String lon = "30.360";
+String city = "Saint Petersburg";
+List<Weather> sevenWeather = [];
+
+class WeekWeather extends StatefulWidget {
   const WeekWeather({Key? key}) : super(key: key);
+
+  @override
+  State<WeekWeather> createState() => _WeekWeatherState();
+}
+
+class _WeekWeatherState extends State<WeekWeather> {
+
+  getData() async{
+    fetchData(lat, lon, city).then((value){
+      sevenWeather = value[2];
+      setState(() {
+      });
+    });
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    getData();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,17 +68,18 @@ class WeekWeather extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.start,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('23 сентября',
+                  Text(sevenWeather[0].day,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
-                  Image.asset('images/partly_cloudy.png', width: 85, height: 76),
+                  Container(margin: EdgeInsets.only(top: 16),
+                      child: getDayIcon(sevenWeather[0].image)),
                   Container(
-                    margin: EdgeInsets.only(top: 26),
+                    margin: EdgeInsets.only(top: 45),
                     child: Row(
                       children: [
                         getIcon("thermometer 1", Theme.of(context).colorScheme.brightness),
                         Container(
                           margin: EdgeInsets.only(left: 8),
-                          child: Text('8', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
+                          child: Text(sevenWeather[0].current.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
                         ),
                         Text('˚c', style: TextStyle(color: Theme.of(context).textTheme.headline6!.color, fontSize: 16, fontWeight: FontWeight.w600))
                       ],
@@ -64,7 +92,7 @@ class WeekWeather extends StatelessWidget {
                         getIcon("breeze 1", Theme.of(context).colorScheme.brightness),
                         Container(
                           margin: EdgeInsets.only(left: 8),
-                          child: Text('9', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
+                          child: Text(sevenWeather[0].wind.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
                         ),
                         Text('м/с', style: TextStyle(color: Theme.of(context).textTheme.headline6!.color, fontSize: 16, fontWeight: FontWeight.w600))
                       ],
@@ -77,7 +105,7 @@ class WeekWeather extends StatelessWidget {
                         getIcon("humidity 1", Theme.of(context).colorScheme.brightness),
                         Container(
                           margin: EdgeInsets.only(left: 8),
-                          child: Text('87', style: TextStyle( fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
+                          child: Text(sevenWeather[0].humidity.toString(), style: TextStyle( fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
                         ),
                         Text('%', style: TextStyle(color: Theme.of(context).textTheme.headline6!.color, fontSize: 16, fontWeight: FontWeight.w600))
                       ],
@@ -90,7 +118,7 @@ class WeekWeather extends StatelessWidget {
                         getIcon("barometer 1", Theme.of(context).colorScheme.brightness),
                         Container(
                           margin: EdgeInsets.only(left: 8),
-                          child: Text('761', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
+                          child: Text(sevenWeather[0].pressure.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
                         ),
                         Text('мм.рт.ст', style: TextStyle(color: Theme.of(context).textTheme.headline6!.color, fontSize: 16, fontWeight: FontWeight.w600))
                       ],
@@ -122,7 +150,7 @@ class WeekWeather extends StatelessWidget {
     );
 
   }
-  
+
   List<Color> getGradiendColor(Brightness brightness){
     if(brightness == Brightness.dark){
       return [
@@ -146,6 +174,16 @@ class WeekWeather extends StatelessWidget {
       path + _icon + imageExtension,
       width: 24,
       height: 24,
+    );
+  }
+
+  Image getDayIcon(String _icon) {
+    String path = 'images/';
+    String imageExtension = ".png";
+    return Image.asset(
+      path + _icon + imageExtension,
+      width: 85,
+      height: 76,
     );
   }
 }

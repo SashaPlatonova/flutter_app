@@ -33,7 +33,7 @@ String appId = "5afa0f095e31e5b72e0d15b4c0dbeed4";
 String findIcon(String name){
   switch(name){
     case "Clouds":
-      return "partly_cloudy";
+      return "rain3";
       break;
     case "Rain":
       return "rain";
@@ -51,6 +51,30 @@ String findIcon(String name){
       return "sun";
   }
 }
+
+String weekIcon(String name){
+  switch(name){
+    case "Clouds":
+      return "clody";
+      break;
+    case "Rain":
+      return "rainy";
+      break;
+    case "Drizzle":
+      return "rainy";
+      break;
+    case "Thunderstorm":
+      return "thnderstorm";
+      break;
+    case "Clear":
+      return "slight_touch_happyday";
+      break;
+    case "Snow": return "snowy";
+    default:
+      return "sun";
+  }
+}
+
 Future<List> fetchData(String lat, String lon, String city) async {
   var url = "https://api.openweathermap.org/data/2.5/onecall?lat=$lat&lon=$lon&units=metric&appid=$appId";
   var response = await http.get(Uri.parse(url));
@@ -71,8 +95,12 @@ Future<List> fetchData(String lat, String lon, String city) async {
     );
 
     List<Weather> todayWeather = [];
-    int hour = int.parse(DateFormat("hh").format(date));
-    for (var i = 0; i < 4; i++) {
+    int hour = int.parse(DateFormat.H('ru').format(date));
+    for (var j = 0; j < 13; j+=3) {
+      int i = hour+j;
+      if(i>23){
+        i = i-24;
+      }
       var temp = res["hourly"];
       var hourly = Weather(name: "",
           location: city,
@@ -82,13 +110,30 @@ Future<List> fetchData(String lat, String lon, String city) async {
           pressure: temp[i]["pressure"]?.round() ?? 0,
           current: temp[i]["temp"]?.round() ?? 0,
           image: findIcon(temp[i]["weather"][0]["main"].toString()),
-          time: Duration(hours: hour + i + 3).toString().split(":")[0] + ":00"
+          time: Duration(hours: i).toString().split(":")[0] + ":00"
       );
       todayWeather.add(hourly);
     }
-    return [currentTemp, todayWeather];
+    List<Weather> sevenDay = [];
+    for(var i=0;i<8;i++){
+      String day = DateFormat.MMMMd('ru').format(date);
+      var temp = res["daily"][i];
+      var hourly = Weather(
+          current: temp["temp"]["day"]?.round() ?? 0,
+          pressure: temp["pressure"]?.round() ?? 0,
+          humidity: temp["humidity"]?.round() ?? 0,
+          wind: temp["wind_speed"]?.round() ?? 0,
+          location: city,
+          image:weekIcon(temp["weather"][0]["main"].toString()),
+          name:temp["weather"][0]["main"].toString(),
+          day: day,
+          time:""
+      );
+      sevenDay.add(hourly);
+    }
+    return [currentTemp, todayWeather, sevenDay];
   }
-  return [null, null];
+  return [null, null, null];
 }
 
 class CityModel{
