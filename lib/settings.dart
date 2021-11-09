@@ -1,6 +1,8 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_app/main.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 import 'package:flutter_app/theme/config.dart';
 import 'package:flutter_app/theme/custom_theme.dart';
@@ -13,6 +15,18 @@ class Settings extends StatefulWidget {
 }
 
 class _SettingsState extends State<Settings> {
+
+  int temp = 0;
+  int speed = 0;
+  int pressure = 0;
+  int theme = 0;
+
+  @override
+  void initState(){
+    super.initState();
+    initValues().then((value) => null);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -22,7 +36,11 @@ class _SettingsState extends State<Settings> {
             elevation: 0,
             leading: ElevatedButton(
             onPressed: (){
-            Navigator.pop(context);
+              Navigator
+                  .of(context)
+                  .push(
+                  MaterialPageRoute(builder: (_) => MyHomePage())
+              );
             },
             child: Icon(Icons.arrow_back_ios),
               style: ElevatedButton.styleFrom(
@@ -105,10 +123,13 @@ class _SettingsState extends State<Settings> {
                           ]
                       ),
                       child: ToggleSwitch(
-                          initialLabelIndex: 0,
+                          initialLabelIndex: temp,
                           totalSwitches: 2,
                           labels: ['˚C', '˚F'],
                           onToggle: (index) {
+                            temp = index;
+                            setTemp();
+                            initValues();
                           print('switched to: $index');
                         },
                         minHeight: 25,
@@ -166,10 +187,13 @@ class _SettingsState extends State<Settings> {
                             ]
                         ),
                         child: ToggleSwitch(
-                          initialLabelIndex: 0,
+                          initialLabelIndex: speed,
                           totalSwitches: 2,
                           labels: ['м/с', 'км/ч'],
                           onToggle: (index) {
+                            speed = index;
+                            setSpeed();
+                            initValues();
                             print('switched to: $index');
                           },
                           minHeight: 25,
@@ -227,10 +251,14 @@ class _SettingsState extends State<Settings> {
                             ]
                         ),
                         child: ToggleSwitch(
-                          initialLabelIndex: 0,
+                          initialLabelIndex: pressure,
                           totalSwitches: 2,
                           labels: ['мм.рт.ст.', 'гПа'],
                           onToggle: (index) {
+                            setState(() {
+                              pressure = index;
+                              setPressure();
+                            });
                             print('switched to: $index');
                           },
                           minHeight: 25,
@@ -288,11 +316,13 @@ class _SettingsState extends State<Settings> {
                             ]
                         ),
                         child: ToggleSwitch(
-                          initialLabelIndex: returnInitial(Theme.of(context).colorScheme.brightness),
+                          initialLabelIndex: theme,
                           totalSwitches: 2,
                           labels: ['Dark', 'Light'],
                           onToggle: (index) {
                             setState(() {
+                              theme = index;
+                              setTheme();
                               currentTheme.toggleTheme();
                             });
 
@@ -322,6 +352,36 @@ class _SettingsState extends State<Settings> {
       return 0;
     }
     return 1;
+  }
+
+  void setTemp() async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    preferences.setInt('temp', temp);
+  }
+
+  void setSpeed() async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    preferences.setInt('speed', speed);
+  }
+
+  void setPressure() async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    preferences.setInt('pressure', pressure);
+  }
+
+  void setTheme() async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    preferences.setInt('theme', theme);
+  }
+
+  Future<void> initValues() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    setState(() {
+      temp = preferences.getInt('temp')?? 0;
+      pressure = preferences.getInt('pressure')?? 0;
+      speed = preferences.getInt('speed')?? 0;
+      theme = preferences.getInt('theme')?? 0;
+    });
   }
 }
 

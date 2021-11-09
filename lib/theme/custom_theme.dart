@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 
 class CustomTheme with ChangeNotifier{
@@ -9,6 +10,16 @@ class CustomTheme with ChangeNotifier{
   void toggleTheme() {
     _isDarkTheme = !_isDarkTheme;
     notifyListeners();
+  }
+
+  Future<void> getTheme() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    if(preferences.getInt('theme') == 1){
+      _isDarkTheme = false;
+    }
+    else {
+      _isDarkTheme = true;
+    }
   }
 
   static ThemeData get lightTheme {

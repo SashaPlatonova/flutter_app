@@ -39,6 +39,10 @@ dependencies:
   http: ^0.13.4
 
   intl: ^0.17.0
+
+  flutter_swiper_null_safety: ^1.0.2
+  shared_preferences: ^2.0.8
+  favorite_button: ^0.0.4
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
 

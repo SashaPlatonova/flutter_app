@@ -1,27 +1,41 @@
 
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_app/about_app.dart';
 import 'package:flutter_app/favorites.dart';
 import 'package:flutter_app/settings.dart';
+import 'package:flutter_app/settings_values.dart';
 import 'package:flutter_app/theme/config.dart';
 import 'package:flutter_app/theme/custom_theme.dart';
 import 'package:flutter_app/weather.dart';
 import 'package:flutter_app/week_weather.dart';
 import 'package:expandable_bottom_sheet/expandable_bottom_sheet.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'new_page.dart';
 
 Weather? currentWeather;
 List<Weather> todayWeather = [];
-String lat = "59.931";
-String lon = "30.360";
-String city = "Saint Petersburg";
+List<Weather> sevenWeather = [];
+double lat = 59.931;
+double lon = 30.360;
+String city_name = "Saint-Petersburg";
+int temp = 0;
+int pressure = 0;
+int speed = 0;
+Units? units;
+CityModel? currentCity = CityModel(name: city_name, localName: "Санкт-Петербург", lat: lat, lon: lon);
+String? headStr = currentWeather!.day;
+bool isExpend = false;
+
 void main() {
   initializeDateFormatting('ru', null);
   runApp(const MyApp());
-  DateTime dat = DateTime.now();
-  print(dat);
+  // DateTime dat = DateTime.now();
+  // print(dat);
 }
 
 class MyApp extends StatefulWidget {
@@ -36,10 +50,11 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    super.initState();
+    currentTheme.getTheme();
     currentTheme.addListener(() {
       setState(() {});
     });
+    super.initState();
   }
 
   @override
@@ -64,25 +79,62 @@ class MyHomePage extends StatefulWidget {
 }
 
 class _MyHomePageState extends State<MyHomePage> {
+
+  Widget? persistentHeader;
+
   final Future<String> _calculation = Future<String>.delayed(
-    const Duration(seconds: 2),
+    const Duration(seconds: 3),
         () => 'Data Loaded',
   );
+
   final GlobalKey<ScaffoldState> _scaffoldKey = new GlobalKey<ScaffoldState>();
 
-
   getData() async{
-    fetchData(lat, lon, city).then((value){
+    await getCity();
+    await fetchData(currentCity!.lat.toString(), currentCity!.lon.toString(), currentCity!.name).then((value){
       currentWeather = value[0];
       todayWeather = value[1];
+      getUnits();
+      // persistentHeader = getModalTopChild();
       setState(() {
       });
     });
+  }
+  Future<void> getUnits() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    setState(() {
+      temp = preferences.getInt('temp')?? 0;
+      pressure = preferences.getInt('pressure')?? 0;
+      speed = preferences.getInt('speed')?? 0;
+      units = new Units(t: temp, s: speed, p: pressure);
+    });
+  }
+
+  Future<void> getCity() async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    var coded = preferences.getString('main_city');
+    setState(() {
+      if(coded!=null){
+        var decoded = jsonDecode(coded);
+        currentCity = new CityModel(name: decoded['name'], localName: decoded['local_names'], lat: decoded['lat'], lon: decoded['lon']);
+      }
+    });
+  }
+
+  Widget? initPersistentHeader(bool isExpend){
+    if(isExpend) {
+      persistentHeader = getModalTopChildExtend();
+    }
+    else {
+      persistentHeader = getModalTopChild();
+    }
+    return persistentHeader;
   }
 
   @override
   void initState() {
     super.initState();
+    getCity();
     getData();
   }
 
@@ -196,6 +248,19 @@ class _MyHomePageState extends State<MyHomePage> {
         ),
       ),
       body: ExpandableBottomSheet(
+        onIsExtendedCallback: ()=>
+        {
+          setState(() {
+            headStr = currentCity!.localName;
+            isExpend = true;
+          })
+        },
+        onIsContractedCallback: ()=>{
+          setState(() {
+            isExpend = false;
+            headStr = currentWeather!.day;
+          })
+        },
         background:
         Container(
             padding: EdgeInsets.only(top: 50),
@@ -223,12 +288,12 @@ class _MyHomePageState extends State<MyHomePage> {
                     TextButton(onPressed:(){
                     },
                       child: Text(
-                        currentWeather!.current.toString() + '˚c',
+                        units!.parseTemp(currentWeather!.current) + units!.parseTempName(),
                         style: TextStyle(color: Colors.white, fontSize: 56, letterSpacing: 0.1),
                       ),
                     ),
                     Text(
-                      currentWeather!.day,
+                      headStr!,
                       style: TextStyle(color: Colors.white, fontSize: 26),
                     ),
                   ],
@@ -252,83 +317,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             )
         ),
-        persistentHeader: Container(
-            height: 300,
-            decoration: BoxDecoration(
-                borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
-                color: Theme.of(context).colorScheme.secondary
-            ),
-            child: Column(
-                children: <Widget>[
-                  Container(
-                      padding: EdgeInsets.only(top: 20, bottom: 20),
-                      child:
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image(
-                            image: headerImg(Theme.of(context).colorScheme.brightness),
-                            height: 3,
-                            width: 60,
-                          )
-                        ],
-                      )
-                  ),
-                  Container(
-                      margin: EdgeInsets.symmetric(vertical: 0.0),
-                      height: 150.0,
-                      child: ListView.builder(
-                          padding: const EdgeInsets.only(left: 8, top: 0, bottom: 0, right: 8),
-                          scrollDirection: Axis.horizontal,
-                          itemCount: 4,
-                          itemBuilder: (BuildContext context, int index) {
-                            return Container(
-                                padding: const EdgeInsets.only(
-                                    left: 10, top: 15, bottom: 15, right: 10),
-                                margin: const EdgeInsets.only(left: 20, top: 5, bottom: 5, right: 10),
-                                decoration: BoxDecoration(
-                                    color: Theme.of(context).colorScheme.onPrimary,
-                                    borderRadius: BorderRadius.all(Radius.circular(18)),
-                                    boxShadow: cardBoxShadow(Theme.of(context).brightness)),
-                                child: Column(children: [
-                                  Text(
-                                    todayWeather[index].time,
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 17,
-                                        color: Theme.of(context).primaryColor),
-                                  ),
-                                  getWeatherIcon(todayWeather[index].image, Theme.of(context).colorScheme.brightness),
-                                  Text(
-                                    todayWeather[index].current.toString() + '˚c',
-                                    style: TextStyle(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 17,
-                                        color: Theme.of(context).primaryColor),
-                                  ),
-                                ]));
-                          })
-                  ),
-                  Container(
-                    margin: EdgeInsets.only(top: 20),
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: Theme.of(context).colorScheme.secondaryVariant)
-                    ),
-                    child:
-                    ElevatedButton(onPressed: (){
-                      Navigator.of(context).push(MaterialPageRoute(builder: (_) => WeekWeather())
-                      );
-                    },
-                        style: ElevatedButton.styleFrom(primary: Theme.of(context).colorScheme.onPrimary, elevation: 0),
-                        child: Text(
-                          'Прогноз на неделю',
-                          style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.secondaryVariant),
-                        )
-                    ),
-                  ),
-                ])
-        ),
+        persistentHeader: initPersistentHeader(isExpend),
         expandableContent: Container(
             decoration: BoxDecoration(color: Theme.of(context).colorScheme.secondary),
             child: Column(
@@ -343,7 +332,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           Container(
                             width: 150,
-                            margin: EdgeInsets.fromLTRB(20, 32, 20, 8),
+                            margin: EdgeInsets.fromLTRB(20, 0, 20, 8),
                             decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.onPrimary,
                                 boxShadow: cardBoxShadow(Theme.of(context).colorScheme.brightness),
@@ -356,16 +345,16 @@ class _MyHomePageState extends State<MyHomePage> {
                                     bottomImage(Theme.of(context).colorScheme.brightness, 'thermometer 1'),
                                     Container(
                                       margin: EdgeInsets.only(left: 8),
-                                      child: Text(currentWeather!.current.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),),
+                                      child: Text(units!.parseTemp(currentWeather!.current), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),),
                                     ),
-                                    Text('˚c', style: TextStyle(color:Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
+                                    Text(units!.parseTempName(), style: TextStyle(color:Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
                                   ],
                                 )
                             ),
                           ),
                           Container(
                             width: 150,
-                            margin: EdgeInsets.fromLTRB(10, 32, 20, 8),
+                            margin: EdgeInsets.fromLTRB(10, 0, 20, 8),
                             decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.onPrimary,
                                 boxShadow: cardBoxShadow(Theme.of(context).colorScheme.brightness),
@@ -391,7 +380,7 @@ class _MyHomePageState extends State<MyHomePage> {
                         children: [
                           Container(
                             width: 150,
-                            margin: EdgeInsets.fromLTRB(20, 32, 20, 8),
+                            margin: EdgeInsets.fromLTRB(20, 32, 20, 32),
                             decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.onPrimary,
                                 boxShadow: cardBoxShadow(Theme.of(context).colorScheme.brightness),
@@ -404,9 +393,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                     bottomImage(Theme.of(context).colorScheme.brightness, 'breeze 1'),
                                     Container(
                                       margin: EdgeInsets.only(left: 8),
-                                      child: Text(currentWeather!.wind.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),),
+                                      child: Text(units!.parseSpeed(currentWeather!.wind), style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),),
                                     ),
-                                    Text('м/с', style: TextStyle(color: Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
+                                    Text(units!.parseSpeedName(), style: TextStyle(color: Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
                                   ],
                                 )
                             ),
@@ -414,7 +403,7 @@ class _MyHomePageState extends State<MyHomePage> {
                           Container(
                             width: 150,
                             height: 65,
-                            margin: EdgeInsets.fromLTRB(20, 32, 0, 8),
+                            margin: EdgeInsets.fromLTRB(20, 32, 0, 32),
                             decoration: BoxDecoration(
                                 color: Theme.of(context).colorScheme.onPrimary,
                                 boxShadow: cardBoxShadow(Theme.of(context).colorScheme.brightness),
@@ -430,9 +419,9 @@ class _MyHomePageState extends State<MyHomePage> {
                                       ),
                                       Container(
                                         margin: EdgeInsets.only(left: 8),
-                                        child: Text(currentWeather!.pressure.toString(), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
+                                        child: Text(units!.parsePressure(currentWeather!.pressure), style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Theme.of(context).primaryColor),),
                                       ),
-                                      Text('мм.рт.ст', style: TextStyle(color: Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
+                                      Text(units!.parsePressureName(), style: TextStyle(color: Theme.of(context).colorScheme.onSecondary, fontSize: 16, fontWeight: FontWeight.w600))
                                     ],
                                   ),
                                 )
@@ -451,7 +440,7 @@ class _MyHomePageState extends State<MyHomePage> {
   }
         else {
           child = child = Scaffold(
-            backgroundColor: Color.fromRGBO(226, 235, 255, 1.0),
+            backgroundColor: Theme.of(context).colorScheme.secondary,
             body: Center(
                 child: Stack(
                   children: [
@@ -465,7 +454,7 @@ class _MyHomePageState extends State<MyHomePage> {
                     ),
                     Center(
                       child: CircularProgressIndicator(
-                        color: Colors.black,
+                        color: Theme.of(context).primaryColor,
                       ),
                     )
                   ],
@@ -544,6 +533,164 @@ class _MyHomePageState extends State<MyHomePage> {
       return Image.asset('images/' + _icon + '_dark.png', width: 24, height:24);
     }
     return Image.asset('images/' + _icon + '.png', width: 24, height: 24);
+  }
+
+
+  Widget getModalTopChild(){
+    return
+      Container(
+          height: 300,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              color: Theme.of(context).colorScheme.secondary
+          ),
+          child: Column(
+              children: <Widget>[
+                Container(
+                    padding: EdgeInsets.only(top: 20, bottom: 20),
+                    child:
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image(
+                          image: headerImg(Theme.of(context).colorScheme.brightness),
+                          height: 3,
+                          width: 60,
+                        )
+                      ],
+                    )
+                ),
+                Container(
+                    margin: EdgeInsets.symmetric(vertical: 0.0),
+                    height: 150.0,
+                    child: ListView.builder(
+                        padding: const EdgeInsets.only(left: 8, top: 0, bottom: 0, right: 8),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: 4,
+                        itemBuilder: (BuildContext context, int index) {
+                          return Container(
+                              padding: const EdgeInsets.only(
+                                  left: 10, top: 15, bottom: 15, right: 10),
+                              margin: const EdgeInsets.only(left: 20, top: 5, bottom: 5, right: 10),
+                              decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  boxShadow: cardBoxShadow(Theme.of(context).brightness)),
+                              child: Column(children: [
+                                Text(
+                                  todayWeather[index].time,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 17,
+                                      color: Theme.of(context).primaryColor),
+                                ),
+                                getWeatherIcon(todayWeather[index].image, Theme.of(context).colorScheme.brightness),
+                                Text(
+                                  units!.parseTemp(todayWeather[index].current) + units!.parseTempName(),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 17,
+                                      color: Theme.of(context).primaryColor),
+                                ),
+                              ]));
+                        })
+                ),
+                Container(
+                  margin: EdgeInsets.only(top: 20),
+                  decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: Theme.of(context).colorScheme.secondaryVariant)
+                  ),
+                  child:
+                  ElevatedButton(onPressed: (){
+                    Navigator.of(context).push(MaterialPageRoute(builder: (_) => WeekWeather())
+                    );
+                  },
+                      style: ElevatedButton.styleFrom(primary: Theme.of(context).colorScheme.onPrimary, elevation: 0),
+                      child: Text(
+                        'Прогноз на неделю',
+                        style: TextStyle(fontSize: 14, color: Theme.of(context).colorScheme.secondaryVariant),
+                      )
+                  ),
+                ),
+              ])
+      );
+  }
+
+  Widget getModalTopChildExtend(){
+    return
+      Container(
+          height: 280,
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.only(topLeft: Radius.circular(20), topRight: Radius.circular(20)),
+              color: Theme.of(context).colorScheme.secondary
+          ),
+          child: Column(
+              children: <Widget>[
+                Container(
+                    padding: EdgeInsets.only(top: 20, bottom: 20),
+                    child:
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image(
+                          image: headerImg(Theme.of(context).colorScheme.brightness),
+                          height: 3,
+                          width: 60,
+                        )
+                      ],
+                    )
+                ),
+                Container(
+                  padding: EdgeInsets.only(bottom: 20),
+                  child: Center(
+                    child: Text(
+                      DateFormat.MMMMd('ru').format(DateTime.now()),
+                      style: TextStyle(
+                          fontSize: 17,
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).primaryColor
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                    margin: EdgeInsets.symmetric(vertical: 0.0),
+                    height: 150.0,
+                    child: ListView.builder(
+                        padding: const EdgeInsets.only(left: 8, top: 0, bottom: 0, right: 8),
+                        scrollDirection: Axis.horizontal,
+                        itemCount: 4,
+                        itemBuilder: (BuildContext context, int index) {
+                          return Container(
+                              padding: const EdgeInsets.only(
+                                  left: 10, top: 15, bottom: 15, right: 10),
+                              margin: const EdgeInsets.only(left: 20, top: 5, bottom: 5, right: 10),
+                              decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.onPrimary,
+                                  borderRadius: BorderRadius.all(Radius.circular(18)),
+                                  boxShadow: cardBoxShadow(Theme.of(context).brightness)),
+                              child: Column(children: [
+                                Text(
+                                  todayWeather[index].time,
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 17,
+                                      color: Theme.of(context).primaryColor),
+                                ),
+                                getWeatherIcon(todayWeather[index].image, Theme.of(context).colorScheme.brightness),
+                                Text(
+                                  units!.parseTemp(todayWeather[index].current) + units!.parseTempName(),
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                      fontSize: 17,
+                                      color: Theme.of(context).primaryColor),
+                                ),
+                              ]));
+                        })
+                ),
+              ])
+      );
   }
 
 }

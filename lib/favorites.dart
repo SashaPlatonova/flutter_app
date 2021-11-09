@@ -1,7 +1,61 @@
-import 'package:flutter/material.dart';
+import 'dart:convert';
 
-class Favorites extends StatelessWidget {
+import 'package:flutter/material.dart';
+import 'package:flutter_app/weather.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'main.dart';
+
+class Favorites extends StatefulWidget {
   const Favorites({Key? key}) : super(key: key);
+
+  @override
+  State<Favorites> createState() => _FavoritesState();
+}
+
+class _FavoritesState extends State<Favorites> {
+
+  List<CityModel> favCity = [];
+
+  Future<void> initFavourite() async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    var favourites = preferences.getStringList('favourites');
+    setState(() {
+      for (String favourite in favourites!){
+        var decode = jsonDecode(favourite);
+        favCity.add(new CityModel(name: decode['name'],
+            localName: decode['local_names'],
+            lat: decode['lat'], lon: decode['lon']));
+      }
+    });
+  }
+  Future<void> deleteFavCity(CityModel city) async{
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    var favourites = preferences.getStringList('favourites');
+    for (int i=0; i<favourites!.length; i++){
+      var decode = jsonDecode(favourites[i]);
+      if(city.lat==decode['lat'] && city.lon==decode['lon']){
+        favourites.removeAt(i);
+        break;
+      }
+    }
+    await preferences.setStringList('favourites', favourites);
+    setState(() {
+      favCity.remove(city);
+    });
+  }
+
+  Future<void> mainCity(CityModel city) async {
+    SharedPreferences preferences = await SharedPreferences.getInstance();
+    var jsonCity = jsonEncode(city.toJson());
+    await preferences.setString('main_city', jsonCity);
+  }
+
+  @override
+  void initState(){
+    initFavourite().then((value) => {});
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,8 +71,12 @@ class Favorites extends StatelessWidget {
               .secondary,
           elevation: 0,
           leading: ElevatedButton(
-            onPressed: () {
-              Navigator.pop(context);
+            onPressed: (){
+              Navigator
+                  .of(context)
+                  .push(
+                  MaterialPageRoute(builder: (_) => MyHomePage())
+              );
             },
             child: Icon(Icons.arrow_back_ios),
             style: ElevatedButton.styleFrom(
@@ -54,7 +112,7 @@ class Favorites extends StatelessWidget {
               .secondary),
           child: Container(
             margin: EdgeInsets.fromLTRB(20, 32, 20, 0),
-            child: getFavCity(["Москва", "СПб"], Theme
+            child: getFavCity(favCity, Theme
                 .of(context)
                 .colorScheme
                 .brightness)
@@ -63,7 +121,7 @@ class Favorites extends StatelessWidget {
     );
   }
 
-  ListView getFavCity(List<String> city, Brightness brightness) {
+  ListView getFavCity(List<CityModel> city, Brightness brightness) {
     return ListView.builder(
         scrollDirection: Axis.vertical,
         itemCount: city.length,
@@ -89,13 +147,19 @@ class Favorites extends StatelessWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
+                      GestureDetector(
+                        onTap:  () => {
+                          Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyHomePage())),
+                          mainCity(city[index])
+                          },
+                  child:
                       Container(
-                        margin: EdgeInsets.only(left: 16, right: 206),
-                        child: Text(city[index], style: TextStyle(
+                        margin: EdgeInsets.only(left: 16, right: 20),
+                        child: Text(city[index].localName.toString(), style: TextStyle(
                             color: Colors.black,
                             fontSize: 13,
                             fontWeight: FontWeight.w600),),
-                      ),
+                      )),
                       Container(
                         width: 50,
                         height: 50,
@@ -108,12 +172,16 @@ class Favorites extends StatelessWidget {
                               style: ElevatedButton.styleFrom(
                                   primary: Color.fromRGBO(
                                       200, 218, 255, 1.0)),
-                              onPressed: () {},
+                              onPressed: () {
+                                deleteFavCity(city[index]);
+                                setState(() {
+
+                                });
+                              },
                               child: Image.asset('images/close.png')
                           ),
                         ),
                       ),
-
                     ],
                   )
               );
@@ -144,13 +212,19 @@ class Favorites extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
+                    GestureDetector(
+                    onTap:  () => {
+            Navigator.of(context).push(MaterialPageRoute(builder: (_) => MyHomePage())),
+            mainCity(city[index])
+            },
+              child:
                     Container(
                       margin: EdgeInsets.only(left: 16),
-                      child: Text(city[index], style: TextStyle(
+                      child: Text(city[index].localName.toString(), style: TextStyle(
                           color: Colors.white,
                           fontSize: 13,
                           fontWeight: FontWeight.w600),),
-                    ),
+                    )),
                     Container(
                       width: 50,
                       height: 50,
@@ -163,7 +237,10 @@ class Favorites extends StatelessWidget {
                             style: ElevatedButton.styleFrom(
                                 primary: Color.fromRGBO(21, 42, 83, 1.0)),
                             onPressed: () {
-                              city.removeAt(index);
+                              deleteFavCity(city[index]);
+                              setState(() {
+
+                              });
                             },
                             child: Image.asset('images/close_dark.png')
                         ),

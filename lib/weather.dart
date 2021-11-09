@@ -55,7 +55,7 @@ String findIcon(String name){
 String weekIcon(String name){
   switch(name){
     case "Clouds":
-      return "clody";
+      return "cloudy";
       break;
     case "Rain":
       return "rainy";
@@ -116,7 +116,9 @@ Future<List> fetchData(String lat, String lon, String city) async {
     }
     List<Weather> sevenDay = [];
     for(var i=0;i<8;i++){
-      String day = DateFormat.MMMMd('ru').format(date);
+      DateTime _date = DateTime.now();
+      _date = _date.add(Duration(days: i));
+      String day = DateFormat.MMMMd('ru').format(_date);
       var temp = res["daily"][i];
       var hourly = Weather(
           current: temp["temp"]["day"]?.round() ?? 0,
@@ -138,31 +140,24 @@ Future<List> fetchData(String lat, String lon, String city) async {
 
 class CityModel{
   final String name;
-  final String lat;
-  final String lon;
-  CityModel({required this.name,required this.lat,required this.lon});
+  var localName;
+  final double lat;
+  final double lon;
+  CityModel({required this.name, required this.localName, required this.lat,required this.lon});
+
+  Map<String, dynamic> toJson() => {
+    'name': name,
+    'local_names': localName,
+    'lat': lat,
+    'lon': lon
+  };
+  factory CityModel.fromJson(Map<String, dynamic> json) {
+    return CityModel(name: json['name'],
+        localName: (json['local_names']['ru'] ?? json['name']) ,
+        lat: json['lat'], lon: json['lon']);
+  }
 }
 
-var cityJSON;
 
-Future<CityModel?> fetchCity(String cityName) async{
-  if(cityJSON==null){
-    String link = "https://raw.githubusercontent.com/dr5hn/countries-states-cities-database/master/cities.json";
-    var response = await http.get(Uri.parse(link));
-    if(response.statusCode==200){
-      cityJSON = json.decode(response.body);
-    }
-  }
-  for(var i=0;i<cityJSON.length;i++){
-    if(cityJSON[i]["name"].toString().toLowerCase() == cityName.toLowerCase()){
-      return CityModel(
-          name:cityJSON[i]["name"].toString(),
-          lat: cityJSON[i]["latitude"].toString(),
-          lon: cityJSON[i]["longitude"].toString()
-      );
-    }
-  }
-  return null;
-}
 
 
