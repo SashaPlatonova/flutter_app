@@ -20,14 +20,8 @@ import 'new_page.dart';
 Weather? currentWeather;
 List<Weather> todayWeather = [];
 List<Weather> sevenWeather = [];
-double lat = 59.931;
-double lon = 30.360;
-String city_name = "Saint-Petersburg";
-int temp = 0;
-int pressure = 0;
-int speed = 0;
 Units? units;
-CityModel? currentCity = CityModel(name: city_name, localName: "Санкт-Петербург", lat: lat, lon: lon);
+CityModel? currentCity;
 String? headStr = currentWeather!.day;
 bool isExpend = false;
 
